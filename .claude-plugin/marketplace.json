@@ -1,0 +1,15 @@
+{
+  "name": "jasonlovesdoggo",
+  "owner": {
+    "name": "Jason Cameron",
+    "url": "https://github.com/JasonLovesDoggo"
+  },
+  "description": "Jason Cameron's agent skills, as an installable plugin.",
+  "plugins": [
+    {
+      "name": "jason-skills",
+      "source": "./",
+      "description": "Jason Cameron's agent skills."
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "jason-skills",
+  "version": "0.1.0",
+  "description": "Jason Cameron's agent skills.",
+  "author": {
+    "name": "Jason Cameron",
+    "url": "https://github.com/JasonLovesDoggo"
+  },
+  "repository": "https://github.com/JasonLovesDoggo/skills",
+  "license": "MIT",
+  "skills": ["./skills/hindsight"]
+}

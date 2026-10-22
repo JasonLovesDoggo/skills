@@ -1,0 +1,5 @@
+interface:
+  display_name: "Hindsight"
+  short_description: "Redesign what was just built with hindsight, and size the simpler version."
+policy:
+  allow_implicit_invocation: false
