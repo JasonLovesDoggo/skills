@@ -26,6 +26,10 @@ npx skills@latest add JasonLovesDoggo/skills
 
 ## Skills
 
+### Model-invoked
+
+- **[benchmarking](./skills/benchmarking/SKILL.md)**: Design, implement, run, and review software performance benchmarks with controlled comparisons and reproducible evidence.
+
 ### User-invoked
 
 - **[hindsight](./skills/hindsight/SKILL.md)**: Redesign what you just built with hindsight. Finds the early decision that forced most of the code, checks the redesign's assumptions against real code, and sizes the simpler version line by line. Run it after the first end-to-end run, or before opening the PR.
