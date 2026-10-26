@@ -4,17 +4,10 @@ Costs for a napkin math estimate, rounded for memorization.
 
 Sources:
 
-- Simon Eskildsen, [napkin-math](https://github.com/sirupsen/napkin-math) (MIT License): the operation costs, techniques, and cloud prices, last measured in October 2026 on GCP `c4-standard-48-lssd` and AWS `m8id.12xlarge` / `m8gd.12xlarge`. Its [BENCHMARKING.md](https://github.com/sirupsen/napkin-math/blob/master/BENCHMARKING.md) explains how to rerun them on your own hardware.
+- Simon Eskildsen, [napkin-math](https://github.com/sirupsen/napkin-math) (MIT License): the operation costs and cloud prices, last measured in October 2026 on GCP `c4-standard-48-lssd` and AWS `m8id.12xlarge` / `m8gd.12xlarge`. Its [BENCHMARKING.md](https://github.com/sirupsen/napkin-math/blob/master/BENCHMARKING.md) explains how to rerun them on your own hardware.
 - Jeff Dean and Sanjay Ghemawat, [Performance Hints](https://abseil.io/fast/hints.html): the branch-mispredict cost and the quicksort and thumbnail examples.
-Expect them to be within 2–3x of your hardware. When a decision rests on one number, measure it on the target machine.
 
-## Technique
-
-- **Decompose.** Write down quantities you can guess until they multiply to the answer: items × operations per item × cost per operation.
-- **Keep units.** They check the arithmetic.
-- **Think in exponents.** Get the power of ten right; the leading digit matters less.
-- **Stay small.** More than six assumptions usually means the model is too complicated.
-- **Add costs for resource use, overlap them for latency.** Concurrent operations cost their maximum on the critical path, not their sum.
+Use them as starting estimates. Measure the dominant operation on the target hardware before treating its cost as a limit.
 
 ## Operation costs
 
@@ -70,8 +63,8 @@ Throughput assumes many operations in flight. Memory and cache figures are for o
 ## Derived rules
 
 - **Amdahl's law:** removing a piece that takes fraction *p* of the time gives at most a 1/(1 − *p*) speedup. A piece at 10% caps the gain near 11%.
-- **Little's law:** in-flight work = throughput × latency. To sustain 10,000 requests/s at 5 ms each, keep 50 in flight.
-- **Sequential round trips:** one connection doing request, wait, request gets at most 1 / (RTT + service time) operations per second. At 0.5 ms per query, that is 2,000/s, no matter how fast the server is.
+- **Little's law:** in-flight work = throughput × latency. At a stable 10,000 requests/s with 5 ms mean latency, 50 requests are in flight on average. A concurrency cap of exactly 50 may not hold that rate under variability.
+- **Sequential round trips:** one connection doing request, wait, request gets at most 1 / (RTT + service time) operations per second. With a 0.5 ms network RTT, one sequential connection cannot exceed 2,000 requests/s even when the server takes no time at all.
 - **Batch overhead:** a batch of *n* items costs overhead + *n* × per-item. The overhead is under 10% of the batch once *n* > 9 × overhead / per-item. With a 500 μs round trip and 5 μs per row, that is past 900 rows.
 - **Passes:** each full pass over data larger than cache costs its size divided by memory bandwidth. Count passes before you tune a single one.
 - **Parallel speedup:** bounded by the cores you have, the serial fraction (Amdahl), and shared bandwidth. Memory-bandwidth-bound work stops scaling once all cores together saturate it.
@@ -81,10 +74,10 @@ Throughput assumes many operations in flight. Memory and cache figures are for o
 
 **Quicksort a billion 4-byte integers.** The array is 4 GB, and quicksort makes about log₂(10⁹) ≈ 30 passes. At about 16 GB/s per core, memory transfer is 30 × 0.25 s ≈ 7.5 s. It does N log N ≈ 3 × 10¹⁰ comparisons; if half mispredict at 5 ns, that is 75 s. Branch mispredictions dominate, so a cutting mispredictions matters more than cutting memory traffic.
 
-**A page with 30 thumbnails of 1 MB images.** Read serially from one HDD, each image takes a 5 ms seek plus a 10 ms transfer, so 30 × 15 ms = 450 ms. Read in parallel across K disks, the latency is about 450 ms ÷ K, with the same total work. From one SSD, each image takes about 20 μs plus 1 ms, so roughly 30 ms in total, even read serially.
+**A page with 30 thumbnails of 1 MB images.** Read serially from one HDD, each image takes a 5 ms seek plus a 10 ms transfer, so 30 × 15 ms = 450 ms. Spread evenly across K disks and read in parallel, it takes about ⌈30 ÷ K⌉ × 15 ms, with the same total work. From one SSD, each image takes about 20 μs plus 1 ms, so roughly 30 ms in total, even read serially.
 
 **Logging cost at 100,000 requests/s.** At 1 KB per log line, that is 100 MB/s, or about 8.6 TB/day. At $0.50 per GB for log ingestion and retention, that is about $4,300 per day, so sampling pays for itself.
 
 ## Cost
 
-Approximate cloud prices per month, consistent across providers: 1 vCPU $15, 1 GB RAM $2, 1 GB blob storage $0.02, 1 GB zonal SSD $0.20, 1 GB inter-zone transfer $0.01, 1 GB internet egress $0.10, and 1 GB of logs or traces ingested $0.50. Blob storage charges about $0.40 per million reads and $5 per million writes, so fewer, larger objects cost less. Date any cost figure you report.
+Illustrative prices; verify the provider, region, and date before a decision rests on one. Monthly: $15 per vCPU, $2 per GB of RAM, $0.02 per GB of blob storage, and $0.20 per GB of zonal SSD. Per GB moved: $0.01 inter-zone, $0.10 internet egress, and $0.50 for log ingestion. Blob requests: $0.40 per million reads and $5 per million writes, so fewer, larger objects cost less.
