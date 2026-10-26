@@ -1,148 +1,94 @@
 ---
 name: benchmarking
-description: Design, implement, run, and review software performance benchmarks. Use when writing benchmark harnesses, comparing implementation or service performance, or auditing benchmark methodology and claims.
+description: Design, run, and audit performance benchmarks and AI evals. Use when writing a benchmark or eval harness, comparing implementations, configurations, services, models, prompts, or agents, reporting a measured speedup, regression, or eval score, or checking someone else's numbers.
 ---
 
 # Benchmarking
 
-Make each benchmark answer a specific engineering question with controlled comparisons and reproducible evidence.
+These steps apply to runtime benchmarks and AI evals. Before step 2, read the reference for your measurement:
+
+- **Runtime** (speed, throughput, latency, memory): [references/runtime.md](references/runtime.md)
+- **AI evals** (models, prompts, agents): [references/evals.md](references/evals.md)
+- **Services and databases**, in addition to runtime: [references/services-and-databases.md](references/services-and-databases.md)
+
+Agents tuning against a benchmark game it, even when told not to. Audit every win with step 5 before you report it.
 
 ## Choose the path
 
-- **Design:** produce the experiment specification and execution plan.
-- **Implement or run:** follow the workflow through the requested deliverable; identify which commands actually ran.
-- **Review:** audit the workflow against supplied code, configuration, and results. Report evidence, its impact on the conclusion, and a concrete remedy. Treat missing evidence as unknown; execution is optional unless requested.
+- **Ballpark:** the user asked for a quick number. Run once, count outcomes and work done (step 4), and say it was one run. A choice between options is never a ballpark.
+- **Design:** specify steps 1–6 without running them.
+- **Run:** do steps 1–7.
+- **Audit:** someone else's number, or one from an agent loop. Do step 5 first, since it finds most problems in minutes. Treat an LLM's audit of a claim as a lead, and confirm each finding in the code or raw data.
 
-For client/server systems or databases, apply the [service and database reference](#service-and-database-reference) while choosing or auditing the workload and harness.
+## 1. Write the claim
 
-## 1. Define the experiment
+Before running anything, write the sentence you expect to ship: metric, direction, size, workload, and baseline. For example, "export is 30% faster at p50 than v2.3 on the 60k-row dataset", or "model B passes 12 more of 300 held-out tasks than model A at the same token budget." Under it, write:
 
-Inspect the relevant implementation and existing benchmark tooling. Write a compact specification:
+- the decision the result informs;
+- the smallest difference that would change that decision;
+- your prediction of each candidate's result. For runtime, use napkin math from the `performance` skill.
 
-- **Question:** the decision the result will inform and the systems, versions, or configurations compared.
-- **Useful work:** the operation and its correctness criterion. Distinguish a request, query, transaction, and batch.
-- **Boundary:** where timing starts and ends; identify included setup, serialization, I/O, retries, and cleanup.
-- **Workload:** input provenance or generation, seeds, sizes, operation mix, access distribution, and concurrency or arrival rate. Label synthetic stress cases and what they exercise.
-- **Decision rule:** primary metric, relevant constraints, minimum meaningful improvement or regression, and stopping rule.
+## 2. Choose the workload
 
-Choose representative cases and useful boundaries, such as typical inputs, large inputs, and contention. Keep the matrix focused. Vary one factor for causal isolation; label experiments that change several factors together. Set the decision rule before examining comparative results.
+- **Cases:** cover typical inputs, large inputs, and contention. Label synthetic stress cases with what they exercise. Include inputs that can trigger algorithmic blowups; a case that never finishes counts as a failure.
+- **Holdout:** if anyone tuned a candidate against the benchmark, including an agent, the claim rests on a holdout set that:
+  - shares no cases with the tuning set;
+  - differs in input shape, because overfit code wins on inputs shaped like the tuning set and loses on the rest;
+  - is chosen by someone who knows the domain and did not do the tuning;
+  - runs in full, not as an arbitrary subset.
 
-**Complete when:** the question, workload matrix, measurement boundary, and decision rule are explicit enough to implement without guessing.
+  Tell the tuner, human or agent, that it will be judged on a holdout it cannot see. In Dan Luu's [regex experiment](https://danluu.com/benchpocalypse/), this generalized better than telling the agent not to overfit. Freeze the candidate before showing holdout results. If those results guide more tuning, the holdout is used up, so build a new one.
+- **Weights:** fix how cases combine before running. Weight a summary by real usage, and give separate scores for workloads that answer different questions, such as compile-heavy versus long-running. An unweighted geometric mean treats every case as equally important. Down-weight or drop cases that do not reflect real use, and say which.
 
-## 2. Control the comparison
+**Done when:** the case list, the holdout and who chose it, and the weights are written.
 
-Require equivalent useful work and relevant guarantees: correctness, precision, durability, consistency, replication, and failure handling. Record tradeoffs when these differ.
+## 3. Control the comparison
 
-Choose the comparison basis: same resources, same cost, shipped defaults, or separately tuned systems. Apply that policy symmetrically. Different architectures can be valid candidates for an application decision; scope the conclusion to that decision and workload.
+- **Same work:** every candidate does the same useful work under the same guarantees: correctness, precision, durability, consistency, and failure handling. A candidate that changes the semantics, such as searching whole files where the benchmark specifies line by line, does different work.
+- **Settings:** when comparing implementations, run each with the settings production would use. If one is held back by a setting, such as a debug build, a missing index, or one commit per row, fix it and rerun. When the settings themselves are being compared, such as defaults, keep them and name them in the claim.
+- **Environment:** record the commit of every candidate and of the harness, plus what the reference lists for your measurement. Each number describes one commit.
+- **Noise:** stop competing work. When you cannot, interleave candidates so both see the same noise, and say so.
 
-Record software versions or commits, build mode and flags, runtime, OS, CPU model/generation, available cores, memory, storage, network placement, and effective configuration. Match the dimensions relevant to the question. Core count and RAM alone do not establish equivalent hardware. Mark unavailable platform details as unknown.
+**Done when:** each difference between candidates is controlled, deliberately varied, or disclosed.
 
-Control competing work, resource limits, power or thermal state, and input state where relevant. Disclose unavoidable differences. Record prices and their date when cost is part of the comparison.
+## 4. Build and freeze the harness
 
-**Complete when:** each material difference is controlled, intentionally varied, or disclosed, and each candidate satisfies the stated correctness and service contract.
+Use the repository's benchmark framework when one exists.
 
-## 3. Validate the harness
+- **Outcomes:** count attempted, succeeded, failed, timed out, retried, and unfinished work. A timeout is a failure.
+- **Work done:** check outputs against an oracle or invariant on every run, and print a count of work completed.
+- **Smoke test:** run once and check counts, units, and outputs. Label that output as a smoke test.
+- **Freeze:** commit the harness, inputs, grader, and invocation, and run every comparison from that commit. The interface (how candidates are called and what they may precompute) is part of the harness. A harness change by whoever tuned a candidate voids the comparison until someone else reviews it. Treat an agent-written harness as unreviewed until it is checked against the benchmark's documented method.
 
-Use the repository's established benchmark framework when suitable. Make inputs, duration, repetition, and output location configurable through its conventions.
+## 5. Audit for gaming
 
-- Verify representative outputs against an oracle or invariant. Keep validation outside the timed region unless it belongs to the operation; retain a way to detect incorrect or failed work during measurement.
-- Use a monotonic clock for elapsed time. State units and timing boundaries. For asynchronous work, measure completion at the chosen boundary, including required synchronization.
-- For short operations, batch enough work to resolve timer granularity and inspect harness overhead. Keep fixture construction, logging, and unrelated allocation outside the boundary unless the question includes them.
-- For compiled or JIT code, consume results and use inputs that exercise real work. Check for constant folding and dead-code elimination while retaining representative runtime optimization.
-- Separate setup, warmup, measurement, and teardown. Reset mutable state according to the experiment.
-- Account for attempted, successful, failed, timed-out, retried, and unfinished work as applicable. Specify retry and timeout policy. Distinguish useful completions from attempts.
+Run these checks on every win before you report it:
 
-Run a small correctness smoke test. Check counts, units, outputs, and telemetry before collecting performance evidence; label smoke-test output accordingly.
+- **Harness:** diff it against the frozen commit and against the benchmark's documented method.
+- **Candidate:** read its diff for code keyed to the benchmark: special-cased inputs, sizes, or answers; results returned without reading the input; precomputation the interface does not allow.
+- **Perturbation:** change seeds, values, sizes, and order, then recheck correctness and the gain. If the gain depends on some input property, limit the claim to workloads with that property.
+- **Holdout:** compare tuning-set and holdout results. Find out whether the gap comes from overfitting or from a harder workload, and report where the gain holds.
+- **Real use:** check the result on real workloads, because benchmark rankings and real-use rankings diverge.
+- **Transcripts:** for evals, read passes as well as failures.
 
-**Complete when:** the harness performs the intended work, measures the intended interval, accounts for outcomes, and exposes overhead or scheduling limits that could dominate the result.
+**Done when:** every check passed or led to a fix, and the post-fix results replaced the earlier ones.
 
-## 4. Establish the execution protocol
+## 6. Run
 
-Choose the state being measured:
+- Fix the run count before measuring: at least 5 per candidate, alternating A, B, A, B. Record the order.
+- Report the median and range, and compare the difference with step 1's minimum. Overlapping ranges mean no measurable difference, which does not prove the candidates equal. When the call is close, apply a rank-sum test (Mann–Whitney U) to the per-run results.
+- Keep exploratory runs out of the final comparison. Keep failed and excluded runs, each with its reason.
 
-- **Steady state:** define an observable warmup criterion, such as stable throughput and latency across declared windows plus relevant cache/JIT readiness. Bound warmup; label failure to stabilize.
-- **Cold start, recovery, or cache misses:** define and reproduce the intended starting state for every trial; include the startup costs the question asks about.
+## 7. Report
 
-Choose measurement duration from sample needs and relevant background cycles: GC, checkpointing, compaction, autoscaling, or maintenance. Use a shorter observation only with an explicit limit on what it can establish.
+Lead with the verdict: better, worse, no measurable difference, or inconclusive. Follow with the claim sentence as measured, including unit, run count, median, and range. For example, "p50 41 ms → 33 ms, median of 7 runs per side, range 32–35 ms after, bound by JSON parsing on one core."
 
-Repeat independent trials with a declared reset policy. Alternate or randomize candidate order to reduce drift; record order and environment changes. Choose repetition and stopping criteria from pilot variability and the decision's stakes. Keep exploratory tuning separate from final comparisons. Preserve failed or excluded trials and their reasons.
+The verdict is inconclusive, and the report names the gap, when:
 
-**Complete when:** starting state, warmup, measurement interval, repetition, ordering, reset policy, and stopping criteria are reproducible and support the claimed operating condition.
+- a candidate was held back by a setting (step 3);
+- outcomes or work done were not counted;
+- a tuned candidate has no holdout result;
+- the harness changed mid-comparison, or step 5 was skipped;
+- for runtime, the limiter is unnamed.
 
-## 5. Collect and summarize evidence
-
-Select metrics appropriate to the question:
-
-| Work | Primary observations |
-| --- | --- |
-| Service or database | Successful throughput, latency distribution, errors/timeouts, offered load, and queue behavior |
-| Function or microbenchmark | Time per operation or operations per second; allocations or memory when relevant |
-| Batch job or startup | Total elapsed time, work completed, resource use, and completion/failure status |
-
-Retain raw samples or mergeable histograms, per-run summaries, counts, and timestamps. Capture CPU, memory/GC, disk, and network diagnostics where they can explain a bottleneck.
-
-For latency, report relevant percentiles, normally p50, p95, and p99, with population, time window, units, and sample count. Show errors and timed-out or unfinished work alongside successful latency; a timeout is not an observed completion time. Use extreme percentiles only with enough observations to make them informative. Compute aggregate percentiles from compatible samples or merged histograms, rather than averaging window percentiles.
-
-For sustained workloads, retain throughput and latency time series so stalls, drift, and maintenance remain visible. Separate run-to-run variation from within-run variation. Define every error bar or interval and its unit of observation. Account for dependence in time-series samples; adjacent samples are not independent trials.
-
-Report absolute values and effect size against the named baseline. State the ratio's direction: throughput speedup is candidate/baseline; elapsed-time speedup is baseline/candidate. Include dispersion or uncertainty. Label effects unresolved when the evidence cannot distinguish them from noise.
-
-**Complete when:** summaries can be recomputed from retained measurements and readers can distinguish useful performance, failed work, instability, and uncertainty.
-
-## 6. Explain and hand off
-
-Lead with the answer to the original decision, scoped to the measured workload and environment. Separate observations from causal hypotheses. Use diagnostics to support explanations; test a causal hypothesis by changing a relevant factor when scope allows it. Qualify a local microbenchmark result before extrapolating to application performance.
-
-Leave this record in the repository's normal benchmark location or requested deliverable:
-
-1. Experiment specification, environment manifest, workload inputs or generator/seeds, and effective configuration.
-2. Exact setup, execution, and analysis commands, with reproducible versions and dependencies.
-3. Run identifiers, ordering, warmup/reset details, raw measurements, outcome counts, exclusions, and summary generation.
-4. Results with units, absolute values, effect sizes, variability, scope, limitations, and unresolved questions.
-
-For an implementation-only task, provide the runnable harness and commands and identify measurements still needed. For a review, prioritize findings that could change the conclusion and cite their code location or supplied evidence. Identify proposed runs, smoke-test output, and measured performance explicitly.
-
-**Complete when:** another engineer can rerun the experiment and regenerate its summaries, or the deliverable identifies the evidence still unavailable. Every performance claim must trace to an actual measurement.
-
-## Service and database reference
-
-### Placement and generator capacity
-
-Choose client placement from the measurement boundary. A separate generator host can isolate server resources, but its network path contributes to end-to-end latency. Record region/zone, topology, round-trip latency, connection setup/reuse, TLS, pooling, and connection limits. For same-host tests, account for client/server contention.
-
-With sequential requests, no pipelining, and negligible client work, per-connection throughput is approximately `1 / (network RTT + server processing time)`. Use this as a diagnostic bound, not a model for queued or multiplexed systems. Equal connection counts can produce different server load on different network paths.
-
-Validate generator capacity at the intended rate using CPU, scheduler/event-loop lag, connection limits, in-flight work, queues, and network capacity. Quiet CPU alone does not establish capacity. Resolve generator saturation before claiming server capacity; otherwise label the result generator-limited.
-
-### Arrival model and overload
-
-Match the load model to the question and actual backpressure:
-
-| Model | Scheduling | Question |
-| --- | --- | --- |
-| Closed loop | Each worker waits for completion before its next operation | What do a fixed number of workers achieve? |
-| Open loop | Arrivals follow an independent schedule or replayed trace | What happens at specified external demand, including overload? |
-
-In a closed loop, stalls reduce subsequent offered load. This can cause coordinated omission when interpreted as latency under independent arrivals: requests that would have queued were never issued. Label the measurement accordingly. Prefer directly measuring the intended model; disclose assumptions behind any statistical correction.
-
-For open-loop load, schedule against a monotonic deadline independent of response completion. Awaiting a response and then sleeping is closed loop. Record intended arrival, actual dispatch, and completion times where feasible. Separate scheduler delay, client-observed response time, and time from intended arrival to completion; state which boundary supports the claim.
-
-Define behavior when concurrency or queue limits are reached: queue, reject, drop, or stop according to a declared bound. Count intended, submitted, completed, failed, timed-out, dropped, and pending work as applicable. Expose backpressure and missed schedules; nominal target rate does not prove the server received that load.
-
-For capacity claims, sweep offered load or concurrency through the relevant range and report successful throughput against latency and errors. Define sustainable capacity by the stated latency/error constraint and queue stability. Specify when arrivals stop and in-flight work drains or times out. Count completions over their actual measurement interval, including any reported drain interval.
-
-### Working set and database semantics
-
-Record total rows/bytes, indexes, payload/result sizes, active working set, key distribution, hot-key/tenant skew, read/write mix, transaction boundaries, isolation, and batch size. Keep queries semantically equivalent; inspect plans and schema/index differences when they explain performance.
-
-Compare working set with effective cache capacity, including database buffers, OS page cache, indexes, and metadata. Treat RAM-resident, I/O-bound, and skewed-access cases as distinct workloads. Verify cache/I/O behavior where observable; dataset size alone does not prove residency.
-
-Record acknowledgment, commit, replication, and persistence guarantees, including fsync/WAL settings or equivalents. Measure completed transactions separately from statements. Specify whether connection acquisition, retries, and commit acknowledgments fall inside timing.
-
-### Background work and reset
-
-Inspect checkpoint/WAL thresholds, autovacuum, compaction, GC, storage burst credits, replication, and relevant maintenance. Choose intervals that observe their effects for sustained-performance claims; disclose missing cycles as limitations.
-
-Apply the declared policy for defaults versus tuning. Equal parameter values across systems need not imply equivalent behavior or guarantees. Record effective settings and explain consequential tuning changes.
-
-Restore data and cache conditions for each declared trial state, accounting for growth, fragmentation, and mutation. Define which layers a cold reset affects: process state, database buffers, OS cache, or remote/storage caches. Record inaccessible layers as uncontrolled; a process restart alone does not demonstrate cold storage.
+Include the per-case table and the weights behind any summary. Keep the commands, commits, environment, raw measurements, run order, exclusions, and summary scripts so someone else can regenerate every number. Label each figure as proposed, smoke test, or measured. A PR body gets one primary number and a link to the rest.

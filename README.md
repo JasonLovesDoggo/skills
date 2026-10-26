@@ -28,7 +28,7 @@ npx skills@latest add JasonLovesDoggo/skills
 
 ### Model-invoked
 
-- **[benchmarking](./skills/benchmarking/SKILL.md)**: Design, implement, run, and review software performance benchmarks with controlled comparisons and reproducible evidence.
+- **[benchmarking](./skills/benchmarking/SKILL.md)**: Design, run, and audit performance benchmarks and AI evals. Starts from the claim you expect to ship, guards against overfitting with holdouts and a frozen harness, audits every win for gaming, and reports a verdict from at least 5 alternating runs per side.
 - **[performance](./skills/performance/SKILL.md)**: Make code faster. Makes a napkin math estimate, names the limiter, and works through a hot-path checklist covering passes, early exits, data layout, allocations, I/O calls, batching versus streaming, concurrency, awaits, and threads.
 
 ### User-invoked
