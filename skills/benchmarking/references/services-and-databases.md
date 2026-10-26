@@ -1,7 +1,5 @@
 # Service and database reference
 
-Apply this while choosing or auditing the workload and harness for a client/server system or database. It extends steps 1–5 of the benchmarking skill.
-
 ## Placement and generator capacity
 
 Choose client placement from the measurement boundary. A separate generator host can isolate server resources, but its network path contributes to end-to-end latency. Record region/zone, topology, round-trip latency, connection setup/reuse, TLS, pooling, and connection limits. For same-host tests, account for client/server contention.
@@ -39,6 +37,6 @@ Record acknowledgment, commit, replication, and persistence guarantees, includin
 
 Inspect checkpoint/WAL thresholds, autovacuum, compaction, GC, storage burst credits, replication, and relevant maintenance. Choose intervals that observe their effects for sustained-performance claims; disclose missing cycles as limitations.
 
-Apply the declared policy for defaults versus tuning. Equal parameter values across systems need not imply equivalent behavior or guarantees. Record effective settings and explain consequential tuning changes.
+Match behavior and guarantees across systems, because equal parameter values can behave differently.
 
 Restore data and cache conditions for each declared trial state, accounting for growth, fragmentation, and mutation. Define which layers a cold reset affects: process state, database buffers, OS cache, or remote/storage caches. Record inaccessible layers as uncontrolled; a process restart alone does not demonstrate cold storage.
