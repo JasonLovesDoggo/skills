@@ -1,6 +1,6 @@
 ---
 name: benchmarking
-description: Design, implement, run, and review software performance benchmarks. Use when writing benchmark harnesses, comparing implementation or service performance, or auditing benchmark methodology and claims.
+description: Design, implement, run, and review software performance benchmarks. Use when writing a benchmark harness, comparing implementations, configurations, or services, reporting a measured speedup or regression, or auditing benchmark methodology and claims.
 ---
 
 # Benchmarking
@@ -13,7 +13,7 @@ Make each benchmark answer a specific engineering question with controlled compa
 - **Implement or run:** follow the workflow through the requested deliverable; identify which commands actually ran.
 - **Review:** audit the workflow against supplied code, configuration, and results. Report evidence, its impact on the conclusion, and a concrete remedy. Treat missing evidence as unknown; execution is optional unless requested.
 
-For client/server systems or databases, apply the [service and database reference](#service-and-database-reference) while choosing or auditing the workload and harness.
+For client/server systems or databases, read [references/services-and-databases.md](references/services-and-databases.md) before choosing or auditing the workload and harness.
 
 ## 1. Define the experiment
 
@@ -24,10 +24,11 @@ Inspect the relevant implementation and existing benchmark tooling. Write a comp
 - **Boundary:** where timing starts and ends; identify included setup, serialization, I/O, retries, and cleanup.
 - **Workload:** input provenance or generation, seeds, sizes, operation mix, access distribution, and concurrency or arrival rate. Label synthetic stress cases and what they exercise.
 - **Decision rule:** primary metric, relevant constraints, minimum meaningful improvement or regression, and stopping rule.
+- **Prediction:** a napkin-math estimate of each candidate's result and its expected limiter, from the `performance` skill. A result far from the prediction is investigated before it is reported.
 
 Choose representative cases and useful boundaries, such as typical inputs, large inputs, and contention. Keep the matrix focused. Vary one factor for causal isolation; label experiments that change several factors together. Set the decision rule before examining comparative results.
 
-**Complete when:** the question, workload matrix, measurement boundary, and decision rule are explicit enough to implement without guessing.
+**Complete when:** the question, workload matrix, measurement boundary, decision rule, and prediction are explicit enough to implement without guessing.
 
 ## 2. Control the comparison
 
@@ -85,13 +86,17 @@ For latency, report relevant percentiles, normally p50, p95, and p99, with popul
 
 For sustained workloads, retain throughput and latency time series so stalls, drift, and maintenance remain visible. Separate run-to-run variation from within-run variation. Define every error bar or interval and its unit of observation. Account for dependence in time-series samples; adjacent samples are not independent trials.
 
+Check each result against hardware limits: bytes per second against memory, disk, and network bandwidth, and operations per second times CPU cost per operation against available cores. A result past a limit measured something other than the useful work, such as a cache hit, a no-op, or a failed request.
+
 Report absolute values and effect size against the named baseline. State the ratio's direction: throughput speedup is candidate/baseline; elapsed-time speedup is baseline/candidate. Include dispersion or uncertainty. Label effects unresolved when the evidence cannot distinguish them from noise.
 
 **Complete when:** summaries can be recomputed from retained measurements and readers can distinguish useful performance, failed work, instability, and uncertainty.
 
 ## 6. Explain and hand off
 
-Lead with the answer to the original decision, scoped to the measured workload and environment. Separate observations from causal hypotheses. Use diagnostics to support explanations; test a causal hypothesis by changing a relevant factor when scope allows it. Qualify a local microbenchmark result before extrapolating to application performance.
+Lead with the answer to the original decision, scoped to the measured workload and environment. Name each candidate's limiter, the resource that bounds it, with diagnostic evidence from runs separate from the reported ones. A result without a named limiter is an observation, not an explanation. Separate observations from causal hypotheses; test a causal hypothesis by changing a relevant factor when scope allows it. Compare results with the step 1 prediction and explain large gaps.
+
+Bound application impact with Amdahl's law: report a microbenchmark gain together with the measured share of end-to-end time spent in the benchmarked code.
 
 Leave this record in the repository's normal benchmark location or requested deliverable:
 
@@ -103,46 +108,3 @@ Leave this record in the repository's normal benchmark location or requested del
 For an implementation-only task, provide the runnable harness and commands and identify measurements still needed. For a review, prioritize findings that could change the conclusion and cite their code location or supplied evidence. Identify proposed runs, smoke-test output, and measured performance explicitly.
 
 **Complete when:** another engineer can rerun the experiment and regenerate its summaries, or the deliverable identifies the evidence still unavailable. Every performance claim must trace to an actual measurement.
-
-## Service and database reference
-
-### Placement and generator capacity
-
-Choose client placement from the measurement boundary. A separate generator host can isolate server resources, but its network path contributes to end-to-end latency. Record region/zone, topology, round-trip latency, connection setup/reuse, TLS, pooling, and connection limits. For same-host tests, account for client/server contention.
-
-With sequential requests, no pipelining, and negligible client work, per-connection throughput is approximately `1 / (network RTT + server processing time)`. Use this as a diagnostic bound, not a model for queued or multiplexed systems. Equal connection counts can produce different server load on different network paths.
-
-Validate generator capacity at the intended rate using CPU, scheduler/event-loop lag, connection limits, in-flight work, queues, and network capacity. Quiet CPU alone does not establish capacity. Resolve generator saturation before claiming server capacity; otherwise label the result generator-limited.
-
-### Arrival model and overload
-
-Match the load model to the question and actual backpressure:
-
-| Model | Scheduling | Question |
-| --- | --- | --- |
-| Closed loop | Each worker waits for completion before its next operation | What do a fixed number of workers achieve? |
-| Open loop | Arrivals follow an independent schedule or replayed trace | What happens at specified external demand, including overload? |
-
-In a closed loop, stalls reduce subsequent offered load. This can cause coordinated omission when interpreted as latency under independent arrivals: requests that would have queued were never issued. Label the measurement accordingly. Prefer directly measuring the intended model; disclose assumptions behind any statistical correction.
-
-For open-loop load, schedule against a monotonic deadline independent of response completion. Awaiting a response and then sleeping is closed loop. Record intended arrival, actual dispatch, and completion times where feasible. Separate scheduler delay, client-observed response time, and time from intended arrival to completion; state which boundary supports the claim.
-
-Define behavior when concurrency or queue limits are reached: queue, reject, drop, or stop according to a declared bound. Count intended, submitted, completed, failed, timed-out, dropped, and pending work as applicable. Expose backpressure and missed schedules; nominal target rate does not prove the server received that load.
-
-For capacity claims, sweep offered load or concurrency through the relevant range and report successful throughput against latency and errors. Define sustainable capacity by the stated latency/error constraint and queue stability. Specify when arrivals stop and in-flight work drains or times out. Count completions over their actual measurement interval, including any reported drain interval.
-
-### Working set and database semantics
-
-Record total rows/bytes, indexes, payload/result sizes, active working set, key distribution, hot-key/tenant skew, read/write mix, transaction boundaries, isolation, and batch size. Keep queries semantically equivalent; inspect plans and schema/index differences when they explain performance.
-
-Compare working set with effective cache capacity, including database buffers, OS page cache, indexes, and metadata. Treat RAM-resident, I/O-bound, and skewed-access cases as distinct workloads. Verify cache/I/O behavior where observable; dataset size alone does not prove residency.
-
-Record acknowledgment, commit, replication, and persistence guarantees, including fsync/WAL settings or equivalents. Measure completed transactions separately from statements. Specify whether connection acquisition, retries, and commit acknowledgments fall inside timing.
-
-### Background work and reset
-
-Inspect checkpoint/WAL thresholds, autovacuum, compaction, GC, storage burst credits, replication, and relevant maintenance. Choose intervals that observe their effects for sustained-performance claims; disclose missing cycles as limitations.
-
-Apply the declared policy for defaults versus tuning. Equal parameter values across systems need not imply equivalent behavior or guarantees. Record effective settings and explain consequential tuning changes.
-
-Restore data and cache conditions for each declared trial state, accounting for growth, fragmentation, and mutation. Define which layers a cold reset affects: process state, database buffers, OS cache, or remote/storage caches. Record inaccessible layers as uncontrolled; a process restart alone does not demonstrate cold storage.
