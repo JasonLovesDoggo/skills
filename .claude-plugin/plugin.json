@@ -1,6 +1,6 @@
 {
   "name": "jason-skills",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Jason Cameron's agent skills.",
   "author": {
     "name": "Jason Cameron",
@@ -11,6 +11,7 @@
   "skills": [
     "./skills/hindsight",
     "./skills/benchmarking",
-    "./skills/nasa-handbook"
+    "./skills/nasa-handbook",
+    "./skills/break-ui"
   ]
 }
