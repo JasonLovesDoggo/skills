@@ -30,6 +30,8 @@ npx skills@latest add JasonLovesDoggo/skills
 
 - **[benchmarking](./skills/benchmarking/SKILL.md)**: Design, implement, run, and review software performance benchmarks with controlled comparisons and reproducible evidence.
 
+- **[nasa-handbook](./skills/nasa-handbook/SKILL.md)**: Create illustrated technical handbooks in the style of NASA engineering manuals. Created by [R44VC0RP](https://github.com/R44VC0RP/skills/tree/main/skills/nasa-handbook).
+
 ### User-invoked
 
 - **[hindsight](./skills/hindsight/SKILL.md)**: Redesign what you just built with hindsight. Finds the early decision that forced most of the code, checks the redesign's assumptions against real code, and sizes the simpler version line by line. Run it after the first end-to-end run, or before opening the PR.
