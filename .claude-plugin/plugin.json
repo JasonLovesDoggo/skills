@@ -1,6 +1,6 @@
 {
   "name": "jason-skills",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Jason Cameron's agent skills.",
   "author": {
     "name": "Jason Cameron",
@@ -10,6 +10,7 @@
   "license": "MIT",
   "skills": [
     "./skills/hindsight",
-    "./skills/benchmarking"
+    "./skills/benchmarking",
+    "./skills/nasa-handbook"
   ]
 }
