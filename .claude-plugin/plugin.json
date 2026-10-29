@@ -11,6 +11,7 @@
   "skills": [
     "./skills/hindsight",
     "./skills/benchmarking",
-    "./skills/nasa-handbook"
+    "./skills/nasa-handbook",
+    "./skills/break-ui"
   ]
 }

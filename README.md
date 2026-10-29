@@ -32,6 +32,8 @@ npx skills@latest add JasonLovesDoggo/skills
 
 - **[nasa-handbook](./skills/nasa-handbook/SKILL.md)**: Create illustrated technical handbooks in the style of NASA engineering manuals. Created by [R44VC0RP](https://github.com/R44VC0RP/skills/tree/main/skills/nasa-handbook).
 
+- **[break-ui](./skills/break-ui/SKILL.md)**: Stress-test UI with realistic worst-case data and report what breaks. Created by [Emil Kowalski](https://github.com/emilkowalski/skills/tree/main/skills/break-ui).
+
 ### User-invoked
 
 - **[hindsight](./skills/hindsight/SKILL.md)**: Redesign what you just built with hindsight. Finds the early decision that forced most of the code, checks the redesign's assumptions against real code, and sizes the simpler version line by line. Run it after the first end-to-end run, or before opening the PR.
