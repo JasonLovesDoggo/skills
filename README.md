@@ -34,6 +34,8 @@ npx skills@latest add JasonLovesDoggo/skills
 
 - **[break-ui](./skills/break-ui/SKILL.md)**: Stress-test UI with realistic worst-case data and report what breaks. Created by [Emil Kowalski](https://github.com/emilkowalski/skills/tree/main/skills/break-ui).
 
+- **[stageshow](./skills/stageshow/SKILL.md)**: Build faux product UI that looks like a real product, as a still illustration or an animated cursor demo. Created by [Benji Taylor](https://github.com/benjitaylor/skills/tree/main/stageshow).
+
 ### User-invoked
 
 - **[hindsight](./skills/hindsight/SKILL.md)**: Redesign what you just built with hindsight. Finds the early decision that forced most of the code, checks the redesign's assumptions against real code, and sizes the simpler version line by line. Run it after the first end-to-end run, or before opening the PR.
