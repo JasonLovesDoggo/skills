@@ -38,6 +38,8 @@ npx skills@latest add JasonLovesDoggo/skills
 
 - **[hindsight](./skills/hindsight/SKILL.md)**: Redesign what you just built with hindsight. Finds the early decision that forced most of the code, checks the redesign's assumptions against real code, and sizes the simpler version line by line. Run it after the first end-to-end run, or before opening the PR.
 
+- **[socratic-tutor](./skills/socratic-tutor/SKILL.md)** guides you through a topic one question at a time, tracks mastery by subskill, and revisits earlier material. Created by [Jane Street](https://github.com/janestreet/agent_skills/tree/469868f4489cbdbe178c775a0af05bb6bef63689/socratic-tutor).
+
 ## License
 
 MIT
